@@ -41,7 +41,7 @@ build:
 # Production environment
 prod:
 	@echo "$(GREEN)Starting production environment...$(NC)"
-	@docker compose -f docker-compose.production.yml up -d
+	@docker compose --env-file .env.production -f docker-compose.production.yml up -d
 	@echo "$(GREEN)Application running in production mode$(NC)"
 
 # View logs
