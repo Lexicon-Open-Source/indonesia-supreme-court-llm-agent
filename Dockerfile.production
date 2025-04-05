@@ -6,7 +6,7 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 
 # Create the virtual environment
-RUN uv pip install --system --frozen
+RUN uv sync --frozen
 
 # Final stage
 FROM python:3.10-slim-bookworm
