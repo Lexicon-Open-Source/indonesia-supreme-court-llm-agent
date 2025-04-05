@@ -1,4 +1,4 @@
-.PHONY: help dev build prod logs logs-error logs-tail backup backup-logs index clean health restart update
+.PHONY: help dev build prod logs logs-error logs-tail backup backup-logs index clean health restart update down
 
 # Default goal
 .DEFAULT_GOAL := help
@@ -16,6 +16,7 @@ help:
 	@echo "  $(YELLOW)dev$(NC)          - Run development server locally"
 	@echo "  $(YELLOW)build$(NC)        - Build Docker image"
 	@echo "  $(YELLOW)prod$(NC)         - Run in production mode with Docker Compose"
+	@echo "  $(YELLOW)down$(NC)         - Stop production containers"
 	@echo "  $(YELLOW)logs$(NC)         - View Docker logs"
 	@echo "  $(YELLOW)logs-error$(NC)   - View only error logs"
 	@echo "  $(YELLOW)logs-tail$(NC)    - Tail logs in real-time"
@@ -47,17 +48,17 @@ prod:
 # View logs
 logs:
 	@echo "$(GREEN)Viewing logs...$(NC)"
-	@docker compose -f docker-compose.production.yml logs bo-chat
+	@docker compose --env-file .env.production -f docker-compose.production.yml logs bo-chat
 
 # View error logs only
 logs-error:
 	@echo "$(GREEN)Viewing error logs...$(NC)"
-	@docker compose -f docker-compose.production.yml exec bo-chat cat /app/logs/error.log
+	@docker compose --env-file .env.production -f docker-compose.production.yml exec bo-chat cat /app/logs/error.log
 
 # Tail logs in real-time
 logs-tail:
 	@echo "$(GREEN)Tailing logs in real-time...$(NC)"
-	@docker compose -f docker-compose.production.yml logs -f bo-chat
+	@docker compose --env-file .env.production -f docker-compose.production.yml logs -f bo-chat
 
 # Health check
 health:
@@ -69,7 +70,7 @@ health:
 # Run indexing process
 index:
 	@echo "$(GREEN)Running indexing process...$(NC)"
-	@docker compose -f docker-compose.production.yml exec bo-chat python -m main.cli.index_court_docs_summary_content
+	@docker compose --env-file .env.production -f docker-compose.production.yml exec bo-chat python -m main.cli.index_court_docs_summary_content
 
 # Backup Qdrant data
 backup:
@@ -88,19 +89,25 @@ backup-logs:
 # Clean up
 clean:
 	@echo "$(GREEN)Cleaning up containers and volumes...$(NC)"
-	@docker compose -f docker-compose.production.yml down -v
+	@docker compose --env-file .env.production -f docker-compose.production.yml down -v
 	@echo "$(GREEN)Cleanup completed$(NC)"
+
+# Stop containers
+down:
+	@echo "$(GREEN)Stopping containers...$(NC)"
+	@docker compose --env-file .env.production -f docker-compose.production.yml down
+	@echo "$(GREEN)Containers stopped$(NC)"
 
 # Restart services
 restart:
 	@echo "$(GREEN)Restarting services...$(NC)"
-	@docker compose -f docker-compose.production.yml restart
+	@docker compose --env-file .env.production -f docker-compose.production.yml restart
 	@echo "$(GREEN)Services restarted$(NC)"
 
 # Update and rebuild
 update:
 	@echo "$(GREEN)Updating services...$(NC)"
 	@git pull
-	@docker compose -f docker-compose.production.yml down
-	@docker compose -f docker-compose.production.yml up -d --build
+	@docker compose --env-file .env.production -f docker-compose.production.yml down
+	@docker compose --env-file .env.production -f docker-compose.production.yml up -d --build
 	@echo "$(GREEN)Services updated and rebuilt$(NC)"

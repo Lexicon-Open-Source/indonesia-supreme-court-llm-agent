@@ -1,16 +1,5 @@
-FROM python:3.10-slim-bookworm AS builder
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
-
-# Copy only what's needed for installing dependencies
-WORKDIR /app
-COPY pyproject.toml uv.lock ./
-
-# Create the virtual environment
-RUN uv sync --frozen
-
-# Final stage
 FROM python:3.10-slim-bookworm
-WORKDIR /app
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 # Create a non-root user to run the application
 RUN groupadd -r bouser && useradd -r -g bouser bouser && \
@@ -23,12 +12,12 @@ RUN apt-get update && \
   apt-get clean && \
   rm -rf /var/lib/apt/lists/*
 
-# Copy installed packages from builder stage
-COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
+# Copy the project into the image
+COPY --chown=bouser:bouser . /app
 
-# Copy application code
-COPY --chown=bouser:bouser . .
+# Sync the project into a new environment, using the frozen lockfile
+WORKDIR /app
+RUN uv sync --frozen
 
 # Use production environment variables
 COPY --chown=bouser:bouser .env.production .env
@@ -49,4 +38,4 @@ ENV PYTHONUNBUFFERED=1 \
 USER bouser
 
 EXPOSE ${PORT:-8080}
-CMD uvicorn main.http_server.app:app --port ${PORT:-8080} --host 0.0.0.0
+CMD ["uv", "run", "uvicorn", "main.http_server.app:app", "--port", "${PORT:-8080}", "--host", "0.0.0.0"]
