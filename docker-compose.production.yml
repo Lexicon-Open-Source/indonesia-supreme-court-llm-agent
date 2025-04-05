@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  bo-chat:
+    build:
+      context: .
+      dockerfile: Dockerfile.production
+    restart: always
+    ports:
+      - "${PORT:-8080}:${PORT:-8080}"
+    volumes:
+      - qdrant_data:/app/qdrant_storage
+      - bo_chat_logs:/app/logs
+    env_file:
+      - .env.production
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${PORT:-8080}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  qdrant_data:
+    # Using a named volume to persist Qdrant data
+  bo_chat_logs:
+    # Using a named volume to persist application logs

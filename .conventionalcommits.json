@@ -1,0 +1,31 @@
+{
+  "types": [
+    "feat",
+    "fix",
+    "docs",
+    "style",
+    "refactor",
+    "perf",
+    "test",
+    "build",
+    "ci",
+    "chore",
+    "revert"
+  ],
+  "scope": {
+    "required": false,
+    "allowed": [],
+    "validate": false
+  },
+  "skipQuestions": [
+    "body",
+    "breaking",
+    "footer"
+  ],
+  "issuePrefixes": [
+    "#"
+  ],
+  "breakingChangePrefix": "BREAKING CHANGE:",
+  "footerPrefix": "CLOSES:",
+  "subjectLimit": 100
+}
