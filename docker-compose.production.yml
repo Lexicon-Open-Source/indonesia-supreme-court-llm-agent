@@ -11,8 +11,7 @@ services:
     volumes:
       - qdrant_data:/app/qdrant_storage
       - bo_chat_logs:/app/logs
-    env_file:
-      - .env.production
+    env_file: .env.production
     logging:
       driver: "json-file"
       options:
