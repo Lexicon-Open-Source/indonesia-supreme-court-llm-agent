@@ -6,6 +6,8 @@ services:
     restart: always
     ports:
       - "${PORT:-8080}:${PORT:-8080}"
+    environment:
+      - PORT
     volumes:
       - qdrant_data:/app/qdrant_storage
       - bo_chat_logs:/app/logs
