@@ -4,7 +4,9 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 # Create a non-root user to run the application
 RUN groupadd -r bouser && useradd -r -g bouser bouser && \
   mkdir -p /app/logs /app/qdrant_storage && \
-  chown -R bouser:bouser /app
+  mkdir -p /home/bouser/.cache/uv && \
+  chown -R bouser:bouser /app && \
+  chown -R bouser:bouser /home/bouser
 
 # Install curl for health checks and security packages
 RUN apt-get update && \
@@ -24,7 +26,8 @@ COPY --chown=bouser:bouser .env.production .env
 
 # Set proper permissions
 RUN chmod -R 755 /app/logs && \
-  chmod -R 755 /app/qdrant_storage
+  chmod -R 755 /app/qdrant_storage && \
+  chmod -R 755 /home/bouser/.cache
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
