@@ -9,7 +9,6 @@ import contextlib
 from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security.api_key import APIKeyHeader, APIKey
-from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 import secrets
 import os
 
@@ -33,11 +32,6 @@ app = FastAPI(
 # Security settings
 API_KEY_NAME = "X-API-Key"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
-
-# Security middleware
-if os.getenv("ENVIRONMENT") == "production":
-    # Force HTTPS in production
-    app.add_middleware(HTTPSRedirectMiddleware)
 
 # Add CORS middleware
 app.add_middleware(
