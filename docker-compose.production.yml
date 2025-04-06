@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.production
+    container_name: bo-chat
     restart: always
     ports:
       - "${PORT:-8081}:${PORT:-8081}"
