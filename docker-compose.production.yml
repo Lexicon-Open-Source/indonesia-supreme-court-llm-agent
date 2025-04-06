@@ -28,18 +28,20 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik-public"
+      # HTTP router configuration
       - "traefik.http.routers.bo-chat-http.rule=Host(`chat.lexicon.id`)"
       - "traefik.http.routers.bo-chat-http.entrypoints=web"
       - "traefik.http.routers.bo-chat-http.service=bo-chat"
+      - "traefik.http.routers.bo-chat-http.middlewares=cors@file,rate-limit@file"
+      # Service configuration
       - "traefik.http.services.bo-chat.loadbalancer.server.port=${PORT:-8081}"
-      - "traefik.http.routers.bo-chat-http.middlewares=secure-headers@file,cors@file,rate-limit@file"
+      # HTTPS router configuration
       - "traefik.http.routers.bo-chat.rule=Host(`chat.lexicon.id`)"
       - "traefik.http.routers.bo-chat.service=bo-chat"
       - "traefik.http.routers.bo-chat.entrypoints=websecure"
       - "traefik.http.routers.bo-chat.tls=true"
       - "traefik.http.routers.bo-chat.tls.certresolver=letsencrypt"
       - "traefik.http.routers.bo-chat.middlewares=secure-headers@file,cors@file,rate-limit@file"
-
 
 volumes:
   qdrant_data:
