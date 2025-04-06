@@ -30,7 +30,6 @@ services:
       - "traefik.docker.network=traefik-public"
       - "traefik.http.routers.bo-chat-http.rule=Host(`chat.lexicon.id`)"
       - "traefik.http.routers.bo-chat-http.entrypoints=web"
-      - "traefik.http.services.bo-chat.loadbalancer.server.name=bo-chat"
       - "traefik.http.services.bo-chat-http.loadbalancer.server.port=${PORT:-8081}"
       - "traefik.http.routers.bo-chat-http.middlewares=secure-headers@file,cors@file,rate-limit@file"
       - "traefik.http.routers.bo-chat.rule=Host(`chat.lexicon.id`)"
