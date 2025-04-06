@@ -29,10 +29,14 @@ services:
       - "traefik.http.routers.bo-chat.tls=true"
       - "traefik.http.routers.bo-chat.tls.certresolver=letsencrypt"
       - "traefik.http.services.bo-chat.loadbalancer.server.port=${PORT:-8080}"
-      - "traefik.http.routers.bo-chat.middlewares=secure-headers@file"
+      - "traefik.http.routers.bo-chat.middlewares=secure-headers@file,cors@file,rate-limit@file"
 
 volumes:
   qdrant_data:
     # Using a named volume to persist Qdrant data
   bo_chat_logs:
     # Using a named volume to persist application logs
+
+networks:
+  traefik-public:
+    external: true
