@@ -26,14 +26,16 @@ services:
       - traefik-public
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=traefik-public"
+      - "traefik.http.routers.bo-chat-http.rule=Host(`chat.lexicon.id`)"
+      - "traefik.http.routers.bo-chat-http.entrypoints=web"
+      - "traefik.http.routers.bo-chat-http.middlewares=secure-headers@file,cors@file,rate-limit@file"
       - "traefik.http.routers.bo-chat.rule=Host(`chat.lexicon.id`)"
       - "traefik.http.routers.bo-chat.entrypoints=websecure"
       - "traefik.http.routers.bo-chat.tls=true"
       - "traefik.http.routers.bo-chat.tls.certresolver=letsencrypt"
       - "traefik.http.services.bo-chat.loadbalancer.server.port=${PORT:-8080}"
       - "traefik.http.routers.bo-chat.middlewares=secure-headers@file,cors@file,rate-limit@file"
-      - "traefik.http.routers.bo-chat-http.rule=Host(`chat.lexicon.id`)"
-      - "traefik.http.routers.bo-chat-http.entrypoints=web"
 
 
 volumes:
