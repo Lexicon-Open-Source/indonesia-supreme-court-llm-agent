@@ -9,7 +9,6 @@ import contextlib
 from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security.api_key import APIKeyHeader, APIKey
-from starlette.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 import secrets
 import os
@@ -35,46 +34,10 @@ app = FastAPI(
 API_KEY_NAME = "X-API-Key"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
-# Rate limiting
-class RateLimitMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, calls_per_minute=60):
-        super().__init__(app)
-        self.calls_per_minute = calls_per_minute
-        self.request_counts = {}
-        self.logger = get_logger("rate_limit")
-
-    async def dispatch(self, request, call_next):
-        client_ip = request.client.host
-        current_minute = int(time.time() / 60)
-
-        # Reset counts for new minute
-        if client_ip in self.request_counts and self.request_counts[client_ip][0] != current_minute:
-            self.request_counts[client_ip] = (current_minute, 0)
-
-        # Initialize if first request
-        if client_ip not in self.request_counts:
-            self.request_counts[client_ip] = (current_minute, 0)
-
-        # Increment and check
-        self.request_counts[client_ip] = (current_minute, self.request_counts[client_ip][1] + 1)
-
-        if self.request_counts[client_ip][1] > self.calls_per_minute:
-            self.logger.warning(f"Rate limit exceeded for IP: {client_ip}",
-                               extra={"request_id": request.state.request_id if hasattr(request.state, "request_id") else "-"})
-            return Response(status_code=429, content={"detail": "Too many requests"})
-
-        return await call_next(request)
-
 # Security middleware
 if os.getenv("ENVIRONMENT") == "production":
     # Force HTTPS in production
     app.add_middleware(HTTPSRedirectMiddleware)
-
-# Add trusted hosts middleware
-app.add_middleware(
-    TrustedHostMiddleware,
-    allowed_hosts=os.getenv("ALLOWED_HOSTS", "localhost").split(",")
-)
 
 # Add CORS middleware
 app.add_middleware(
@@ -85,9 +48,6 @@ app.add_middleware(
     allow_headers=["*"],
     max_age=86400,
 )
-
-# Add rate limiting
-app.add_middleware(RateLimitMiddleware, calls_per_minute=int(os.getenv("RATE_LIMIT", "60")))
 
 # Add logging middleware
 app.add_middleware(LoggingMiddleware)
