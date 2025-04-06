@@ -13,7 +13,6 @@ from qdrant_client import QdrantClient
 from qdrant_client.http.models import Distance, VectorParams
 from langchain_core.documents import Document
 
-embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
 app = typer.Typer()
 
 
@@ -27,16 +26,14 @@ class Cases(SQLModel, table=True):
     summary_formatted_en: str | None
 
 
-async def get_paged_docs(case_db_engine, offset: int, limit: int) -> list:
-    async_case_db_session = sessionmaker(bind=case_db_engine, class_=AsyncSession)
-    async with async_case_db_session() as session:
-        paged_result_iterator = await session.exec(
-            select(Cases)
-            .where(is_not(Cases.summary_formatted_en, None))
-            .where(Cases.source == "Indonesia Supreme Court")
-            .offset(offset)
-            .limit(limit)
-        )
+async def get_paged_docs(session, offset: int, limit: int) -> list:
+    paged_result_iterator = await session.exec(
+        select(Cases)
+        .where(is_not(Cases.summary_formatted_en, None))
+        .where(Cases.source == "Indonesia Supreme Court")
+        .offset(offset)
+        .limit(limit)
+    )
 
     paged_results = [result for result in paged_result_iterator]
     return paged_results
@@ -54,61 +51,74 @@ async def main():
         future=True,
     )
 
-    client = QdrantClient(path=get_settings().qdrant_filepath)
-    if client.collection_exists(SUPREME_COURT_CASE_COLLECTION):
-        print(
-            f"found existing `{SUPREME_COURT_CASE_COLLECTION}` collection, clearing old index"
-        )
-        client.delete_collection(SUPREME_COURT_CASE_COLLECTION)
+    # Set up the session outside the loop
+    async_case_db_session = sessionmaker(bind=case_db_engine, class_=AsyncSession)
 
-    client.create_collection(
-        collection_name=SUPREME_COURT_CASE_COLLECTION,
-        vectors_config=VectorParams(size=3072, distance=Distance.COSINE),
-    )
-    client.close()
-
-    vector_store = QdrantVectorStore.from_existing_collection(
-        embedding=embeddings,
-        collection_name=SUPREME_COURT_CASE_COLLECTION,
-        path=get_settings().qdrant_filepath,
-    )
-
+    embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=500,
         chunk_overlap=100,
         separators=["\n\n", "\n", ".", "?", "!", " ", ""],
     )
 
-    while True:
-        print(f"iterating cases database with limit {limit} and offset {offset}")
-        paged_results = await get_paged_docs(
-            case_db_engine=case_db_engine, offset=offset, limit=limit
+    try:
+        # Set up Qdrant client and collection
+        client = QdrantClient(path=get_settings().qdrant_filepath)
+        try:
+            if client.collection_exists(SUPREME_COURT_CASE_COLLECTION):
+                print(
+                    f"found existing `{SUPREME_COURT_CASE_COLLECTION}` collection, clearing old index"
+                )
+                client.delete_collection(SUPREME_COURT_CASE_COLLECTION)
+
+            client.create_collection(
+                collection_name=SUPREME_COURT_CASE_COLLECTION,
+                vectors_config=VectorParams(size=3072, distance=Distance.COSINE),
+            )
+        finally:
+            client.close()
+
+        vector_store = QdrantVectorStore.from_existing_collection(
+            embedding=embeddings,
+            collection_name=SUPREME_COURT_CASE_COLLECTION,
+            path=get_settings().qdrant_filepath,
         )
 
-        if not paged_results:
-            print("finished iteration")
-            break
-
-        for case in paged_results:
-            splitted_docs = text_splitter.split_text(case.summary_formatted)
-
-            vector_store_docs = [
-                Document(
-                    page_content=text_split,
-                    metadata={
-                        "decision_number": case.decision_number,
-                        "full_summary": case.summary_formatted,
-                    },
+        # Database session context manager
+        async with async_case_db_session() as session:
+            while True:
+                print(f"iterating cases database with limit {limit} and offset {offset}")
+                paged_results = await get_paged_docs(
+                    session=session, offset=offset, limit=limit
                 )
-                for text_split in splitted_docs
-            ]
 
-            await vector_store.aadd_documents(documents=vector_store_docs)
+                if not paged_results:
+                    print("finished iteration")
+                    break
 
-        offset += limit
-        indexed_count += len(paged_results)
+                for case in paged_results:
+                    splitted_docs = text_splitter.split_text(case.summary_formatted)
 
-        print(f"indexed docs vector:{indexed_count}")
+                    vector_store_docs = [
+                        Document(
+                            page_content=text_split,
+                            metadata={
+                                "decision_number": case.decision_number,
+                                "full_summary": case.summary_formatted,
+                            },
+                        )
+                        for text_split in splitted_docs
+                    ]
+
+                    await vector_store.aadd_documents(documents=vector_store_docs)
+
+                offset += limit
+                indexed_count += len(paged_results)
+
+                print(f"indexed docs vector:{indexed_count}")
+    finally:
+        # Ensure the DB engine is disposed properly
+        await case_db_engine.dispose()
 
 
 if __name__ == "__main__":
