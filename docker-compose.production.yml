@@ -22,6 +22,8 @@ services:
       timeout: 10s
       retries: 3
       start_period: 5s
+    networks:
+      - traefik-public
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.bo-chat.rule=Host(`chat.lexicon.id`)"
@@ -30,6 +32,9 @@ services:
       - "traefik.http.routers.bo-chat.tls.certresolver=letsencrypt"
       - "traefik.http.services.bo-chat.loadbalancer.server.port=${PORT:-8080}"
       - "traefik.http.routers.bo-chat.middlewares=secure-headers@file,cors@file,rate-limit@file"
+      - "traefik.http.routers.bo-chat-http.rule=Host(`chat.lexicon.id`)"
+      - "traefik.http.routers.bo-chat-http.entrypoints=web"
+
 
 volumes:
   qdrant_data:
