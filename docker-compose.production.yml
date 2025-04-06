@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile.production
     restart: always
     ports:
-      - "${PORT:-8080}:${PORT:-8080}"
+      - "${PORT:-8081}:${PORT:-8081}"
     volumes:
       - qdrant_data:/app/qdrant_storage
       - bo_chat_logs:/app/logs
@@ -17,7 +17,7 @@ services:
         max-size: "10m"
         max-file: "3"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${PORT:-8080}/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:${PORT:-8081}/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -29,10 +29,11 @@ services:
       - "traefik.docker.network=traefik-public"
       - "traefik.http.routers.bo-chat-http.rule=Host(`chat.lexicon.id`)"
       - "traefik.http.routers.bo-chat-http.entrypoints=web"
-      - "traefik.http.services.bo-chat-http.loadbalancer.server.port=${PORT:-8080}"
+      - "traefik.http.services.bo-chat.loadbalancer.server.name=bo-chat"
+      - "traefik.http.services.bo-chat-http.loadbalancer.server.port=${PORT:-8081}"
       - "traefik.http.routers.bo-chat-http.middlewares=secure-headers@file,cors@file,rate-limit@file"
       - "traefik.http.routers.bo-chat.rule=Host(`chat.lexicon.id`)"
-      - "traefik.http.services.bo-chat.loadbalancer.server.port=${PORT:-8080}"
+      - "traefik.http.services.bo-chat.loadbalancer.server.port=${PORT:-8081}"
       - "traefik.http.routers.bo-chat.entrypoints=websecure"
       - "traefik.http.routers.bo-chat.tls=true"
       - "traefik.http.routers.bo-chat.tls.certresolver=letsencrypt"
